@@ -20,12 +20,12 @@ type connectedUser struct {
 
 type OutboundEnvelope struct {
 	toUserId string
-	event    SocketEvent
+	event    socketEvent
 }
 
 type InboundEnvelope struct {
 	fromUserId string
-	event      SocketEvent
+	event      socketEvent
 }
 
 func (u connectedUser) closeConnection(closeCode int, closeText string) {
@@ -125,7 +125,7 @@ func (r *Relay) sendDatabaseEvents(userId string) {
 	}
 
 	for _, storedEnvelope := range storedEnvelopes {
-		e := SocketEvent{}
+		e := socketEvent{}
 		// TODO handle errors here
 		json.Unmarshal([]byte(storedEnvelope.Event), &e)
 
@@ -134,8 +134,10 @@ func (r *Relay) sendDatabaseEvents(userId string) {
 }
 
 func (r *Relay) readUserEvents(u connectedUser) {
+	defer r.purgeUser(u)
+
 	for {
-		evt := SocketEvent{}
+		evt := socketEvent{}
 		err := u.conn.ReadJSON(&evt)
 
 		// TODO error handling

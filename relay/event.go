@@ -4,13 +4,13 @@ import "encoding/json"
 
 // enum for event body types
 const (
-	TypeEncryptedMessage = "em"
+	TypeEncryptedMessage    = "em"
 	TypeConversationRequest = "cr"
 )
 
 // Schema
 
-type SocketEvent struct {
+type socketEvent struct {
 	TypeName string `json:"t"`
 	Body     string `json:"b"`
 }
@@ -32,7 +32,6 @@ type conversationRequest struct {
 	ConversationId string `json:"c"`
 }
 
-//
 func ParseBody[T eventBody](s string) T {
 	var v T
 	err := json.Unmarshal([]byte(s), &v)

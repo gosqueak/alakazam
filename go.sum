@@ -1,10 +1,8 @@
 github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWmnc=
 github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/gosqueak/apikit v0.0.0-20230510165830-6e20e40ae69f h1:ztYisylDMBWmCtuvFOTNqx1hnGZHZXw8WMTBhXcpLWw=
+github.com/gosqueak/apikit v0.0.0-20230510165830-6e20e40ae69f/go.mod h1:XYNC+RaWNHOvQfZIOB6ijTqWbIQ13Cpzeze+1I5BM80=
+github.com/gosqueak/jwt v0.0.0-20230510165842-1b5cd2f15c4b h1:XxRXkhQkS+RDhow2SBc2YSu14KbwtJ/7gxnEopBJbHg=
+github.com/gosqueak/jwt v0.0.0-20230510165842-1b5cd2f15c4b/go.mod h1:uRizwGYohVTUVNT9fCzzPQHSLMoqklmFKmEC2SNPTgQ=
 github.com/mattn/go-sqlite3 v1.14.16 h1:yOQRA0RpS5PFz/oikGwBEqvAWhWg5ufRz4ETLjwpU1Y=
 github.com/mattn/go-sqlite3 v1.14.16/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
-github.com/gosqueak/apikit v0.0.0-20230508142059-35120e3c551b h1:QqrxB13OJXJc7JtITM5scnl1SmOPIW503yoXGFNNs9s=
-github.com/gosqueak/apikit v0.0.0-20230508142059-35120e3c551b/go.mod h1:1qOcEsrbB9jJzmvBYhyk/9p9Msv3fmHfRCH193oWOBI=
-github.com/gosqueak/jwt v0.0.0-20230508142059-35120e3c551b h1:OAVzjjIKEFcW1G1epQDVe3ix8m0xNxrv3af3rwHtUrc=
-github.com/gosqueak/jwt v0.0.0-20230508142059-35120e3c551b/go.mod h1:xTYHI0dXe1EZfi1OoOoi6kUMmGn0F1lAUE72+bT6778=
-github.com/gosqueak/alakazam v0.0.0-20230508142059-35120e3c551b h1:fT+u8FMXqqtNz0v5LbnQ9Rl3/nYcOfKTo/ah5kqf6iY=
-github.com/gosqueak/alakazam v0.0.0-20230508142059-35120e3c551b/go.mod h1:FZ+szkYC+ZW4Rcv9mWaWYEXsusMVdS9uPGAkIydR2RY=

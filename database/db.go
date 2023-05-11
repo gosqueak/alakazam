@@ -8,11 +8,6 @@ import (
 
 const DbFileName = "data.sqlite"
 
-type Envelope struct {
-	ToUserId string `json:"toUserId"`
-	Event    string `json:"event"`
-}
-
 func Load(fp string) *sql.DB {
 	db, err := sql.Open("sqlite3", fp)
 
@@ -21,11 +16,11 @@ func Load(fp string) *sql.DB {
 	}
 
 	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS envelope (
+		CREATE TABLE IF NOT EXISTS socketEvent (
 			toUserId TEXT NOT NULL,
-			event TEXT NOT NULL
+			json TEXT NOT NULL
 		);
-		CREATE INDEX IF NOT EXISTS indexEnvelopeToUserId ON envelope(toUserId);
+		CREATE INDEX IF NOT EXISTS indexSocketEventToUserId on socketEvent(toUserId);
 	`)
 
 	if err != nil {
@@ -35,14 +30,12 @@ func Load(fp string) *sql.DB {
 	return db
 }
 
-func GetStoredEnvelopes(db *sql.DB, toUserId string) ([]Envelope, error) {
-	stmt := "SELECT toUserId, event FROM envelope WHERE toUserId=?"
+func GetStoredSocketEvents(db *sql.DB, toUserId string) (eventJSON []string, err error) {
+	stmt := "SELECT json FROM socketEvent WHERE toUserId=?"
 	rows, err := db.Query(stmt, toUserId)
-	
-	var envelopes []Envelope
 
 	if err != nil {
-		return envelopes, err
+		return nil, err
 	}
 
 	for {
@@ -50,23 +43,22 @@ func GetStoredEnvelopes(db *sql.DB, toUserId string) ([]Envelope, error) {
 			break
 		}
 
-		env := Envelope{}
-		err := rows.Scan(&env.ToUserId, &env.Event)
+		var json string
+		err = rows.Scan(&json)
 
 		if err != nil {
 			break
 		}
 
-		envelopes = append(envelopes, env)
+		eventJSON = append(eventJSON, json)
 	}
 
-	return envelopes, nil
+	return eventJSON, nil
 }
 
-func StoreEnvelope(db *sql.DB, toUserId string, event string) error {
-	// TODO need to delete envelopes here
-	stmt := "INSERT INTO envelope (toUserId, event) VALUES (?, ?)"
-	_, err := db.Exec(stmt, toUserId, event)
+func StoreSocketEvent(db *sql.DB, toUserId string, eventJSON string) error {
+	stmt := "INSERT INTO socketEvent (toUserId, json) VALUES (?, ?)"
+	_, err := db.Exec(stmt, toUserId, eventJSON)
 
 	return err
 }

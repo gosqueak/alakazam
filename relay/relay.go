@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/gosqueak/alakazam/database"
@@ -18,33 +17,38 @@ type connectedUser struct {
 	conn *websocket.Conn
 }
 
-type OutboundEnvelope struct {
-	toUserId string
-	event    socketEvent
+type connectionMap struct {
+	users map[string]connectedUser
+	mu    sync.Mutex
 }
 
-type InboundEnvelope struct {
-	fromUserId string
-	event      socketEvent
+func (c *connectionMap) add(u connectedUser) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.users[u.id] = u
 }
 
-func (u connectedUser) closeConnection(closeCode int, closeText string) {
-	u.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(closeCode, closeText),
-		time.Now().Add(time.Second*3))
+func (c *connectionMap) get(uid string) (u connectedUser, ok bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	u, ok = c.users[uid]
+	return u, ok
+}
 
+func (c *connectionMap) purge(u connectedUser) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	u.conn.Close()
+	delete(c.users, u.id)
 }
 
 type Relay struct {
-	db          *sql.DB
-	upgrader    websocket.Upgrader
-	connected   map[string]connectedUser
-	mu          sync.Mutex
-	in          chan InboundEnvelope
-	out         chan OutboundEnvelope
-	jwtAudience jwt.Audience
+	db             *sql.DB
+	upgrader       websocket.Upgrader
+	connectedUsers connectionMap
+	in             chan socketEvent
+	out            chan socketEvent
+	jwtAudience    jwt.Audience
 }
 
 func NewRelay(db *sql.DB, aud jwt.Audience) *Relay {
@@ -54,19 +58,21 @@ func NewRelay(db *sql.DB, aud jwt.Audience) *Relay {
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
-		connected:   make(map[string]connectedUser),
-		in:          make(chan InboundEnvelope, 5),
-		out:         make(chan OutboundEnvelope, 5),
+		connectedUsers: connectionMap{
+			users: make(map[string]connectedUser),
+		},
+		in:          make(chan socketEvent, 5),
+		out:         make(chan socketEvent, 5),
 		jwtAudience: aud,
 	}
 
-	go r.sendEnvelopes()
-	go r.routeEnvelopes()
+	go r.sendSocketEvents()
+	go r.receiveSocketEvents()
 
 	return r
 }
 
-func (r *Relay) UpgradeHandler(w http.ResponseWriter, req *http.Request) {
+func (r *Relay) HandleUpgradeConnection(w http.ResponseWriter, req *http.Request) {
 	token, err := kit.GetTokenFromCookie(req, r.jwtAudience.Name)
 
 	if err != nil || !r.jwtAudience.IsValid(token) {
@@ -90,103 +96,61 @@ func (r *Relay) connectUser(conn *websocket.Conn, userId string) {
 		conn: conn,
 	}
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	defer r.connectedUsers.purge(user)
+	r.connectedUsers.add(user)
 
-	r.connected[user.id] = user
+	// send user events that were stored in db
+	go func() {
+		eventJSON, _ := database.GetStoredSocketEvents(r.db, userId)
+		for _, str := range eventJSON {
+			var e socketEvent
+			// TODO handle errors here
+			json.Unmarshal([]byte(str), &e)
+			r.out <- e
+		}
+	}()
 
-	go r.sendDatabaseEvents(user.id)
-	go r.readUserEvents(user)
-}
-
-func (r *Relay) getUser(userId string) (u connectedUser, ok bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	u, ok = r.connected[userId]
-	return u, ok
-}
-
-func (r *Relay) purgeUser(u connectedUser) {
-	u.closeConnection(websocket.CloseNormalClosure, "")
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	delete(r.connected, u.id)
-}
-
-func (r *Relay) sendDatabaseEvents(userId string) {
-	storedEnvelopes, err := database.GetStoredEnvelopes(r.db, userId)
-
-	// TODO handle errors
-	if err != nil {
-
-	}
-
-	for _, storedEnvelope := range storedEnvelopes {
-		e := socketEvent{}
-		// TODO handle errors here
-		json.Unmarshal([]byte(storedEnvelope.Event), &e)
-
-		r.out <- OutboundEnvelope{userId, e}
-	}
-}
-
-func (r *Relay) readUserEvents(u connectedUser) {
-	defer r.purgeUser(u)
-
+	// block here and continually read events
 	for {
-		evt := socketEvent{}
-		err := u.conn.ReadJSON(&evt)
+		var e socketEvent
+		err := user.conn.ReadJSON(&e)
 
 		// TODO error handling
 		if err != nil {
-
+			break
 		}
 
-		r.in <- InboundEnvelope{u.id, evt}
+		r.in <- e
 	}
 }
 
-func (r *Relay) sendEnvelopes() {
-	for env := range r.out {
-		user, ok := r.getUser(env.toUserId)
+func (r *Relay) sendSocketEvents() {
+	for e := range r.out {
+		user, ok := r.connectedUsers.get(e.ToUserId)
 
 		if !ok { //user not connected
-			go r.storeEnvelope(env)
+			go r.storeSocketEvent(e)
 			continue
 		}
 
 		// TODO add error handling below
-		go user.conn.WriteJSON(env.event)
+		go user.conn.WriteJSON(e)
 	}
 }
 
-func (r *Relay) storeEnvelope(env OutboundEnvelope) {
-	eventBytes, err := json.Marshal(env.event)
+func (r *Relay) storeSocketEvent(e socketEvent) error {
+	eventBytes, err := json.Marshal(e)
 
 	if err != nil {
 		panic(err)
 	}
 
-	err = database.StoreEnvelope(r.db, env.toUserId, string(eventBytes))
+	return database.StoreSocketEvent(r.db, e.ToUserId, string(eventBytes))
 
-	//TODO handle errors
-	if err != nil {
-
-	}
 }
 
-func (r *Relay) routeEnvelopes() {
-	for env := range r.in {
-		switch env.event.TypeName {
-		case TypeEncryptedMessage:
-			em := ParseBody[encryptedMessage](env.event.Body)
-			r.out <- OutboundEnvelope{em.ToUserId, env.event}
-		case TypeConversationRequest:
-			cr := ParseBody[conversationRequest](env.event.Body)
-			r.out <- OutboundEnvelope{cr.ToUserId, env.event}
-		}
+func (r *Relay) receiveSocketEvents() {
+	for e := range r.in {
+		r.out <- e
 	}
 }

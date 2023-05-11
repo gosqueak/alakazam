@@ -4,35 +4,27 @@ import "encoding/json"
 
 // enum for event body types
 const (
-	TypeEncryptedMessage    = "em"
-	TypeConversationRequest = "cr"
+	TypeECDHNotification = "en"
 )
 
 // Schema
 
 type socketEvent struct {
-	TypeName string `json:"t"`
-	Body     string `json:"b"`
+	TypeName   string `json:"t"`
+	ToUserId   string `json:"tu"`
+	FromUserId string `json:"fu"`
+	Body       string `json:"b"`
 }
 
 type eventBody interface {
-	encryptedMessage | conversationRequest
+	ecdhNotification
 }
 
-type encryptedMessage struct {
-	ToUserId          string `json:"t"`
-	B64Ciphertext     string `json:"b"`
-	SenderPreKeyId    string `json:"s"`
-	RecipientPrekeyId string `json:"r"`
+type ecdhNotification struct {
+	ExchangeUUID string `json:"e"`
 }
 
-type conversationRequest struct {
-	ToUserId       string `json:"t"`
-	FromUserId     string `json:"f"`
-	ConversationId string `json:"c"`
-}
-
-func ParseBody[T eventBody](s string) T {
+func parseBody[T eventBody](s string) T {
 	var v T
 	err := json.Unmarshal([]byte(s), &v)
 

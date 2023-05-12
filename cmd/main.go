@@ -9,27 +9,25 @@ import (
 	kit "github.com/gosqueak/apikit"
 	"github.com/gosqueak/jwt"
 	"github.com/gosqueak/jwt/rs256"
-)
-
-const (
-	Addr            = "0.0.0.0:8082"
-	AuthServerUrl   = "http://0.0.0.0:8081"
-	JwtKeyPublicUrl = AuthServerUrl + "/jwtkeypub"
-	JwtActorName    = "MSGSERVICE"
+	"github.com/gosqueak/leader/team"
 )
 
 func main() {
+	tm := team.Download("https://raw.githubusercontent.com/gosqueak/leader/main/Teamfile.json")
+	alakazam := tm["alakazam"]
+	steelix := tm["steelix"]
+
 	db := database.Load(database.DbFileName)
 	defer db.Close()
 
-	pKey, err := kit.Retry[*rsa.PublicKey](3, rs256.FetchRsaPublicKey, []any{JwtKeyPublicUrl})
+	pKey, err := kit.Retry[*rsa.PublicKey](3, rs256.FetchRsaPublicKey, steelix.Url + "/jwtkeypub")
 	if err != nil {
 		panic("Could not fetch RSA public key")
 	}
 
-	aud := jwt.NewAudience(pKey, JwtActorName)
+	aud := jwt.NewAudience(pKey, alakazam.JWTInfo.AudienceName)
 
-	apiServ := api.NewServer(Addr, db, aud, relay.NewRelay(db, aud))
+	apiServ := api.NewServer(alakazam.Url, db, aud, relay.NewRelay(db, aud))
 
 	apiServ.Run()
 }

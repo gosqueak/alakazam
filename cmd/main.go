@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rsa"
+	"os"
 
 	"github.com/gosqueak/alakazam/api"
 	"github.com/gosqueak/alakazam/database"
@@ -13,14 +14,14 @@ import (
 )
 
 func main() {
-	tm := team.Download("https://raw.githubusercontent.com/gosqueak/leader/main/Teamfile.json")
+	tm := team.Download(os.Getenv("TEAMFILE_JSON_URL"))
 	alakazam := tm["alakazam"]
 	steelix := tm["steelix"]
 
 	db := database.Load(database.DbFileName)
 	defer db.Close()
 
-	pKey, err := kit.Retry[*rsa.PublicKey](3, rs256.FetchRsaPublicKey, steelix.Url + "/jwtkeypub")
+	pKey, err := kit.Retry[*rsa.PublicKey](3, rs256.FetchRsaPublicKey, steelix.Url+"/jwtkeypub")
 	if err != nil {
 		panic("Could not fetch RSA public key")
 	}

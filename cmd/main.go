@@ -21,14 +21,14 @@ func main() {
 	db := database.Load(database.DbFileName)
 	defer db.Close()
 
-	pKey, err := kit.Retry[*rsa.PublicKey](3, rs256.FetchRsaPublicKey, steelix.Url+"/jwtkeypub")
+	pKey, err := kit.Retry[*rsa.PublicKey](3, rs256.FetchRsaPublicKey, steelix.Url.String()+"/jwtkeypub")
 	if err != nil {
 		panic("Could not fetch RSA public key")
 	}
 
 	aud := jwt.NewAudience(pKey, alakazam.JWTInfo.AudienceName)
 
-	apiServ := api.NewServer(alakazam.Url, db, aud, relay.NewRelay(db, aud))
+	apiServ := api.NewServer(alakazam.ListenAddress, db, aud, relay.NewRelay(db, aud))
 
 	apiServ.Run()
 }

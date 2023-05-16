@@ -14,9 +14,9 @@ import (
 )
 
 func main() {
-	tm := team.Download(os.Getenv("TEAMFILE_JSON_URL"))
-	alakazam := tm["alakazam"]
-	steelix := tm["steelix"]
+	tm := team.Download(os.Getenv("TEAMFILE_URL"))
+	alakazam := tm.Member("alakazam")
+	steelix := tm.Member("steelix")
 
 	db := database.Load(database.DbFileName)
 	defer db.Close()

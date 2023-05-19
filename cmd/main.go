@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rsa"
+	"fmt"
 	"os"
 
 	"github.com/gosqueak/alakazam/api"
@@ -14,7 +15,11 @@ import (
 )
 
 func main() {
-	tm := team.Download(os.Getenv("TEAMFILE_URL"))
+	tm, err := team.Download(os.Getenv("TEAMFILE_URL"))
+	if err != nil {
+		panic(err)
+	}
+
 	alakazam := tm.Member("alakazam")
 	steelix := tm.Member("steelix")
 
@@ -23,7 +28,7 @@ func main() {
 
 	pKey, err := kit.Retry[*rsa.PublicKey](3, rs256.FetchRsaPublicKey, steelix.Url.String()+"/jwtkeypub")
 	if err != nil {
-		panic("Could not fetch RSA public key")
+		panic(fmt.Errorf("could not fetch RSA public key: %w", err))
 	}
 
 	aud := jwt.NewAudience(pKey, alakazam.JWTInfo.AudienceName)

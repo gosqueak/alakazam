@@ -6,7 +6,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const DbFileName = "data.sqlite"
+const DbFileName = "dbAlakazam.sqlite"
 
 func Load(fp string) *sql.DB {
 	db, err := sql.Open("sqlite3", fp)

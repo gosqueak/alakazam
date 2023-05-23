@@ -3,6 +3,7 @@ package relay
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"sync"
 
@@ -57,6 +58,7 @@ func NewRelay(db *sql.DB, aud jwt.Audience) *Relay {
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
+			CheckOrigin:     func(r *http.Request) bool { return true },
 		},
 		connectedUsers: connectionMap{
 			users: make(map[string]connectedUser),
@@ -126,6 +128,8 @@ func (r *Relay) connectUser(conn *websocket.Conn, userId string) {
 
 func (r *Relay) sendSocketEvents() {
 	for e := range r.out {
+		log.Printf("Sending event : %v... => %v... : %v", e.FromUserId[:7], e.ToUserId[:7], e.Body)
+
 		user, ok := r.connectedUsers.get(e.ToUserId)
 
 		if !ok { //user not connected
@@ -151,6 +155,7 @@ func (r *Relay) storeSocketEvent(e socketEvent) error {
 
 func (r *Relay) receiveSocketEvents() {
 	for e := range r.in {
+		log.Printf("Incoming event : %v... => %v... : %v", e.FromUserId[:7], e.ToUserId[:7], e.Body)
 		r.out <- e
 	}
 }

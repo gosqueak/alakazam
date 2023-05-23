@@ -78,14 +78,14 @@ func (r *Relay) HandleUpgradeConnection(w http.ResponseWriter, req *http.Request
 	token, err := kit.GetTokenFromCookie(req, r.jwtAudience.Name)
 
 	if err != nil || !r.jwtAudience.IsValid(token) {
-		kit.ErrStatusUnauthorized(w)
+		kit.Error(w, "Could not parse JWT from cookie.", http.StatusUnauthorized)
 		return
 	}
 
 	conn, err := r.upgrader.Upgrade(w, req, nil)
 
 	if err != nil {
-		kit.ErrInternal(w)
+		kit.Error(w, "", http.StatusInternalServerError)
 		return
 	}
 

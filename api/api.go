@@ -7,6 +7,7 @@ import (
 
 	"github.com/gosqueak/alakazam/relay"
 	kit "github.com/gosqueak/apikit"
+	middlew "github.com/gosqueak/apikit/middleware"
 	"github.com/gosqueak/jwt"
 )
 
@@ -24,7 +25,7 @@ func NewServer(addr string, db *sql.DB, aud jwt.Audience, msgRelay *relay.Relay)
 func (s *Server) ConfigureRoutes() {
 	http.HandleFunc(
 		"/ws",
-		kit.LogMiddleware(kit.TokenMiddleware(kit.CookieNameAPIToken, s.jwtAudience, s.eventRelay.HandleUpgradeConnection)),
+		middlew.Log(middlew.CheckToken(kit.CookieNameAPIToken, s.jwtAudience, s.eventRelay.HandleUpgradeConnection)),
 	)
 }
 

@@ -24,7 +24,7 @@ func NewServer(addr string, db *sql.DB, aud jwt.Audience, msgRelay *relay.Relay)
 func (s *Server) ConfigureRoutes() {
 	http.HandleFunc(
 		"/ws",
-		kit.LogMiddleware(s.eventRelay.HandleUpgradeConnection),
+		kit.LogMiddleware(kit.TokenMiddleware(kit.CookieNameAPIToken, s.jwtAudience, s.eventRelay.HandleUpgradeConnection)),
 	)
 }
 

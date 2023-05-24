@@ -75,12 +75,7 @@ func NewRelay(db *sql.DB, aud jwt.Audience) *Relay {
 }
 
 func (r *Relay) HandleUpgradeConnection(w http.ResponseWriter, req *http.Request) {
-	token, err := kit.GetTokenFromCookie(req, r.jwtAudience.Name)
-
-	if err != nil || !r.jwtAudience.IsValid(token) {
-		kit.Error(w, "Could not parse JWT from cookie.", http.StatusUnauthorized)
-		return
-	}
+	token := req.Context().Value(kit.CookieNameAPIToken).(jwt.Jwt)
 
 	conn, err := r.upgrader.Upgrade(w, req, nil)
 

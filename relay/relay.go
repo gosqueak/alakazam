@@ -13,6 +13,14 @@ import (
 	"github.com/gosqueak/jwt"
 )
 
+type envelope struct {
+	TypeName    string `json:"typeName"`
+	ToUserId    string `json:"toUserID"`
+	FromUserId  string `json:"fromUserID"`
+	IsEncrypted bool   `json:"isEncrypted"`
+	Body        string `json:"body"`
+}
+
 type connectedUser struct {
 	id   string
 	conn *websocket.Conn
@@ -47,8 +55,8 @@ type Relay struct {
 	db             *sql.DB
 	upgrader       websocket.Upgrader
 	connectedUsers connectionMap
-	in             chan socketEvent
-	out            chan socketEvent
+	in             chan envelope
+	out            chan envelope
 	jwtAudience    jwt.Audience
 }
 
@@ -63,8 +71,8 @@ func NewRelay(db *sql.DB, aud jwt.Audience) *Relay {
 		connectedUsers: connectionMap{
 			users: make(map[string]connectedUser),
 		},
-		in:          make(chan socketEvent, 5),
-		out:         make(chan socketEvent, 5),
+		in:          make(chan envelope, 5),
+		out:         make(chan envelope, 5),
 		jwtAudience: aud,
 	}
 
@@ -100,7 +108,7 @@ func (r *Relay) connectUser(conn *websocket.Conn, userId string) {
 	go func() {
 		eventJSON, _ := database.GetStoredSocketEvents(r.db, userId)
 		for _, str := range eventJSON {
-			var e socketEvent
+			var e envelope
 			// TODO handle errors here
 			json.Unmarshal([]byte(str), &e)
 			r.out <- e
@@ -109,7 +117,7 @@ func (r *Relay) connectUser(conn *websocket.Conn, userId string) {
 
 	// block here and continually read events
 	for {
-		var e socketEvent
+		var e envelope
 		err := user.conn.ReadJSON(&e)
 
 		// TODO error handling
@@ -137,7 +145,7 @@ func (r *Relay) sendSocketEvents() {
 	}
 }
 
-func (r *Relay) storeSocketEvent(e socketEvent) error {
+func (r *Relay) storeSocketEvent(e envelope) error {
 	eventBytes, err := json.Marshal(e)
 
 	if err != nil {
